@@ -1,12 +1,7 @@
-import React from 'react';
 
-const AnalyticsDonutChart: React.FC = () => {
-  // Dummy data for illustration
-  const data = [
-    { label: 'Food', value: 40, color: '#f43f5e' },
-    { label: 'Groceries', value: 30, color: '#fbbf24' },
-    { label: 'Other', value: 30, color: '#f59e42' },
-  ];
+type DonutChartData = { label: string; value: number; color: string }[];
+
+const AnalyticsDonutChart: React.FC<{ data: DonutChartData }> = ({ data }) => {
   const total = data.reduce((sum, d) => sum + d.value, 0);
   let startAngle = 0;
 
@@ -33,6 +28,14 @@ const AnalyticsDonutChart: React.FC = () => {
         ))}
         <circle cx="60" cy="60" r="32" fill="#fff" />
       </svg>
+      <div className="flex flex-wrap justify-center mt-2">
+        {data.map(d => (
+          <div key={d.label} className="flex items-center mx-2 text-xs">
+            <span style={{ background: d.color }} className="inline-block w-2 h-2 rounded-full mr-1"></span>
+            {d.label}: <span className="font-bold ml-1">₹{d.value}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };

@@ -5,14 +5,18 @@ import { useHistory } from 'react-router';
 
 const profiles = [
   {
-    name: 'Sarah Chen',
-    img: 'https://randomuser.me/api/portraits/women/44.jpg',
+    name: 'Revathy',
+    img: '/Revathy.jpeg',
     color: 'text-red-500',
+    uid: 'userA-uid',
+    pin: '1234',
   },
   {
-    name: 'Marcus Johnson',
-    img: 'https://randomuser.me/api/portraits/men/43.jpg',
+    name: 'Jegan',
+    img: '/Jegan.jpg',
     color: 'text-red-500',
+    uid: 'userB-uid',
+    pin: '5678',
   },
 ];
 

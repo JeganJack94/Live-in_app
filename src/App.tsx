@@ -3,8 +3,6 @@ import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
-import Transactions from './pages/Transactions';
-import Categories from './pages/Categories';
 import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 import PinEntry from './pages/PinEntry';
@@ -48,7 +46,26 @@ setupIonicReact();
 
 
 
-import React, { useState } from 'react';
+import React, { useState, useContext, createContext } from 'react';
+
+// Simple JSON database for two users
+const usersDB = {
+  'userA-uid': {
+    name: 'Revathy',
+    img: '/Revathy.jpeg',
+    uid: 'userA-uid',
+    pin: '1234',
+  },
+  'userB-uid': {
+    name: 'Jegan',
+    img: '/Jegan.jpg',
+    uid: 'userB-uid',
+    pin: '5678',
+  },
+};
+
+// User context
+export const UserContext = createContext<{ user: typeof usersDB['userA-uid']; setUser: (u: typeof usersDB['userA-uid']) => void }>({ user: usersDB['userA-uid'], setUser: () => {} });
 
 const TopHeader: React.FC = () => {
   const [showNotif, setShowNotif] = useState(false);
@@ -57,6 +74,7 @@ const TopHeader: React.FC = () => {
     { id: 2, text: 'Groceries split request', read: false },
     { id: 3, text: 'Monthly report ready', read: true },
   ]);
+  const { user } = useContext(UserContext);
 
   const handleMarkRead = (id: number) => {
     setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
@@ -83,7 +101,7 @@ const TopHeader: React.FC = () => {
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-pulse"></span>
           )}
         </button>
-        <img src="https://randomuser.me/api/portraits/women/44.jpg" alt="profile" className="w-7 h-7 rounded-full border-2 border-white shadow-lg transition-transform duration-300 hover:scale-110" />
+        <img src={user.img} alt={user.name} className="w-7 h-7 rounded-full border-2 border-white shadow-lg transition-transform duration-300 hover:scale-110" />
       </div>
       <NotificationsModal
         isOpen={showNotif}
@@ -114,11 +132,30 @@ const TopHeader: React.FC = () => {
   );
 };
 
-const App: React.FC = () => (
-  <IonApp>
-    <IonReactRouter>
-      <TopHeader />
-  <div className="pb-24 pt-6">
+
+
+const App: React.FC = () => {
+  const [user, setUser] = useState(usersDB['userA-uid']);
+  return (
+    <UserContext.Provider value={{ user, setUser }}>
+      <IonApp>
+        <IonReactRouter>
+          <MainLayout />
+        </IonReactRouter>
+      </IonApp>
+    </UserContext.Provider>
+  );
+};
+
+import { useLocation } from 'react-router-dom';
+
+const MainLayout: React.FC = () => {
+  const { pathname } = useLocation();
+  const hideNav = pathname === '/onboarding' || pathname === '/pin-entry';
+  return (
+    <>
+      {!hideNav && <TopHeader />}
+      <div className={hideNav ? '' : 'pb-24 pt-6'}>
         <IonRouterOutlet>
           <Route exact path="/onboarding">
             <Onboarding />
@@ -128,12 +165,6 @@ const App: React.FC = () => (
           </Route>
           <Route exact path="/analytics">
             <Analytics />
-          </Route>
-          <Route exact path="/transactions">
-            <Transactions />
-          </Route>
-          <Route exact path="/categories">
-            <Categories />
           </Route>
           <Route exact path="/chat">
             <Chat />
@@ -152,9 +183,9 @@ const App: React.FC = () => (
           </Route>
         </IonRouterOutlet>
       </div>
-      <BottomTab />
-    </IonReactRouter>
-  </IonApp>
-);
+      {!hideNav && <BottomTab />}
+    </>
+  );
+};
 
 export default App;

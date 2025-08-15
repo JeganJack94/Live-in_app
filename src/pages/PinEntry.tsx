@@ -1,12 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { arrowBack, close } from 'ionicons/icons';
 import { useHistory, useLocation } from 'react-router';
+import { UserContext } from '../App';
 
 interface LocationState {
   user: {
     name: string;
     img: string;
+    uid: string;
+    pin: string;
   };
 }
 
@@ -14,25 +17,45 @@ const PinEntry: React.FC = () => {
   const history = useHistory();
   const location = useLocation<LocationState>();
   const [pin, setPin] = useState<string>('');
+  const [error, setError] = useState<string>('');
+  const [showForgot, setShowForgot] = useState<boolean>(false);
+  const [newPin, setNewPin] = useState<string>('');
 
-  const user = location.state?.user || { name: 'User', img: '' };
+  const user = location.state?.user || { name: 'User', img: '', uid: '', pin: '' };
+  const { setUser } = useContext(UserContext);
 
-  const handlePinInput = (value: string) => {
+  const handlePinInput = async (value: string) => {
     if (value === 'clear') {
       setPin('');
+      setError('');
     } else if (pin.length < 4) {
-      const newPin = pin + value;
-      setPin(newPin);
+      const newPinValue = pin + value;
+      setPin(newPinValue);
 
-      if (newPin.length === 4) {
-        // Simulate PIN validation
-        if (newPin === '1234') {
+      if (newPinValue.length === 4) {
+        // Replace with Firebase Auth logic if using email/password
+        // For demo, simulate PIN validation
+        if (newPinValue === user.pin) {
+          setError('');
+          setUser(user); // Set global user context
           history.push('/dashboard');
         } else {
-          alert('Invalid PIN. Please try again.');
+          setError('Invalid PIN. Please try again.');
           setPin('');
         }
       }
+    }
+  };
+
+  // Change PIN logic (to be implemented with Firebase)
+  const handleChangePin = () => {
+    if (newPin.length === 4) {
+      // Here you would update the PIN in Firebase for user.uid
+      alert('PIN changed successfully!');
+      setShowForgot(false);
+      setNewPin('');
+    } else {
+      setError('PIN must be 4 digits');
     }
   };
 
@@ -66,27 +89,57 @@ const PinEntry: React.FC = () => {
             ))}
           </div>
 
+          {/* Error Message */}
+          {error && <div className="text-red-500 mb-4">{error}</div>}
+
           {/* Keypad */}
-          <div className="grid grid-cols-3 gap-4 w-full max-w-xs">
-            {[...Array(10)].map((_, index) => (
+          {!showForgot && (
+            <div className="grid grid-cols-3 gap-4 w-full max-w-xs">
+              {[...Array(10)].map((_, index) => (
+                <button
+                  key={index}
+                  className="flex items-center justify-center bg-gray-100 border border-gray-300 rounded-lg text-lg font-bold h-14 hover:bg-gray-200"
+                  onClick={() => handlePinInput(index.toString())}
+                >
+                  {index}
+                </button>
+              ))}
               <button
-                key={index}
-                className="flex items-center justify-center bg-gray-100 border border-gray-300 rounded-lg text-lg font-bold h-14 hover:bg-gray-200"
-                onClick={() => handlePinInput(index.toString())}
+                className="flex items-center justify-center bg-gray-100 border border-gray-300 rounded-lg text-lg font-bold h-14 text-accent hover:bg-gray-200"
+                onClick={() => handlePinInput('clear')}
               >
-                {index}
+                <IonIcon icon={close} />
               </button>
-            ))}
-            <button
-              className="flex items-center justify-center bg-gray-100 border border-gray-300 rounded-lg text-lg font-bold h-14 text-accent hover:bg-gray-200"
-              onClick={() => handlePinInput('clear')}
-            >
-              <IonIcon icon={close} />
-            </button>
-          </div>
+            </div>
+          )}
 
           {/* Forgot PIN Link */}
-          <p className="text-sm text-accent mt-4 cursor-pointer">Forgot your PIN?</p>
+          {!showForgot && (
+            <p className="text-sm text-accent mt-4 cursor-pointer" onClick={() => setShowForgot(true)}>Forgot your PIN?</p>
+          )}
+
+          {/* Forgot PIN Modal */}
+          {showForgot && (
+            <div className="w-full max-w-xs bg-gray-50 rounded-lg p-4 mt-4 shadow">
+              <h2 className="text-lg font-bold mb-2 text-gray-900">Reset PIN</h2>
+              <input
+                type="number"
+                maxLength={4}
+                placeholder="Enter new 4-digit PIN"
+                value={newPin}
+                onChange={e => setNewPin(e.target.value.slice(0, 4))}
+                className="w-full px-3 py-2 rounded-lg border border-gray-300 mb-2"
+              />
+              <button
+                className="w-full bg-primary text-white py-2 rounded-lg font-bold"
+                onClick={handleChangePin}
+              >Change PIN</button>
+              <button
+                className="w-full mt-2 bg-gray-200 text-gray-700 py-2 rounded-lg font-bold"
+                onClick={() => setShowForgot(false)}
+              >Cancel</button>
+            </div>
+          )}
         </div>
       </IonContent>
     </IonPage>
