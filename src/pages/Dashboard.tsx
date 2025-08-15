@@ -75,32 +75,29 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  const handleSaveTransaction = (data: { amount: string; category: string; item: string; partner: string; desc: string }) => {
-    addTransaction(coupleId, {
-      ...data,
-      addedBy: {
-        name: user.name,
-        uid: user.uid,
-      },
-      timestamp: Date.now(),
-    })
-      .then(() => {
-        setToast({ text: 'Transaction added successfully', type: 'success' });
-      })
-      .catch((error) => {
-        console.error('Error saving transaction:', error);
-        setToast({ text: 'Failed to save transaction', type: 'error' });
+  const handleSaveTransaction = async (data: { amount: string; category: string; item: string; partner: string; desc: string }) => {
+    const newId = Date.now().toString();
+    try {
+      await addTransaction(coupleId, {
+        id: newId,
+        ...data,
+        addedBy: {
+          name: user.name,
+          uid: user.uid,
+        },
+        timestamp: Date.now(),
       });
+      setToast({ text: 'Transaction added successfully', type: 'success' });
+    } catch (error: unknown) {
+      console.error('Error saving transaction:', error);
+      setToast({ text: 'Failed to save transaction', type: 'error' });
+    }
   };
 
   useEffect(() => {
     // Listen for shared transactions
     listenTransactions(coupleId, (txList: SharedTransaction[]) => {
-      setTransactions(
-        txList
-          .map((tx) => ({ ...tx, id: (tx as any).id || tx.timestamp }))
-          .reverse()
-      );
+      setTransactions(txList.reverse());
     });
     // Fetch settings for progress circles
     const settingsRef = ref(db, `users/${user.uid}/settings`);
@@ -188,7 +185,7 @@ const Dashboard: React.FC = () => {
                       <button 
                         className="mt-2 text-gray-400 hover:text-red-500" 
                         title="Delete"
-                        onClick={() => handleDeleteTransaction(tx.id, tx.addedBy.uid)}
+                        onClick={() => tx.id && tx.addedBy?.uid && handleDeleteTransaction(tx.id, tx.addedBy.uid)}
                       >
                         <FaTrash />
                       </button>

@@ -24,12 +24,17 @@ export const categoryIcons: Record<string, React.ReactElement> = {
 };
 
 export type Transaction = {
+  id: string;
   amount: string;
   category: string;
   item: string;
   partner: string;
+  addedBy: {
+    uid: string;
+    name?: string;
+  };
   desc: string;
-  timestamp?: number;
+  timestamp: number;
 };
 
 // Add a transaction to RTDB under /couples/{coupleId}/transactions

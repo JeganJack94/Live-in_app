@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, ReactElement } from 'react';
 import { FaHome, FaShoppingCart, FaUtensils, FaBus, FaGift, FaUserFriends, FaBeer, FaHamburger, FaUmbrellaBeach, FaTshirt, FaMoneyBillWave, FaPiggyBank, FaCoins, FaHandHoldingUsd, FaRegStar, FaQuestionCircle } from 'react-icons/fa';
 import { IonModal } from '@ionic/react';
 
-export const categoryIcons: Record<string, JSX.Element> = {
+export const categoryIcons: Record<string, ReactElement> = {
   'Rent': <FaHome className="text-pink-500 text-lg mr-2" />,
   'Groceries': <FaShoppingCart className="text-pink-500 text-lg mr-2" />,
   'Utilities': <FaUtensils className="text-pink-500 text-lg mr-2" />,
