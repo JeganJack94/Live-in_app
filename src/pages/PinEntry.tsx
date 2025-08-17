@@ -2,7 +2,7 @@ import React, { useState, useContext } from 'react';
 import { IonPage, IonContent, IonIcon } from '@ionic/react';
 import { arrowBack, close } from 'ionicons/icons';
 import { useHistory, useLocation } from 'react-router';
-import { UserContext } from '../App';
+import { UserContext } from '../context/UserContext';
 
 interface LocationState {
   user: {

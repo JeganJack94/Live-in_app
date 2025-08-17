@@ -41,14 +41,7 @@ const Analytics: React.FC = () => {
 
 	return (
 		<IonPage>
-			<IonContent className="ion-padding bg-gray-50 pb-24">
-				<div className="flex items-center justify-between mb-2">
-					<div className="font-bold text-lg text-gray-900">Live-in</div>
-					<div className="flex items-center space-x-3">
-						<button className="text-xl text-gray-400"><i className="fas fa-bell"></i></button>
-						<img src="https://randomuser.me/api/portraits/women/44.jpg" alt="profile" className="w-7 h-7 rounded-full border-2 border-white" />
-					</div>
-				</div>
+			<IonContent className="ion-padding top-10 bg-gray-50 pb-24">
 				<h2 className="text-xl font-bold text-gray-900 mb-2 mt-2">Analytics</h2>
 				<div className="flex space-x-2 mb-4">
 					<button className="bg-pink-500 text-white font-semibold px-4 py-1 rounded-full shadow">Month</button>

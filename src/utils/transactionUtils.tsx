@@ -49,7 +49,7 @@ export const addTransaction = (coupleId: string, transaction: Transaction) => {
 // Listen for transactions in RTDB under /couples/{coupleId}/transactions
 export const listenTransactions = (coupleId: string, callback: (transactions: Transaction[]) => void) => {
   const transactionsRef = ref(db, `couples/${coupleId}/transactions`);
-  onValue(transactionsRef, (snapshot) => {
+  return onValue(transactionsRef, (snapshot) => {
     const data = snapshot.val();
     const transactions: Transaction[] = data
       ? Object.entries(data).map(([id, tx]) => ({ ...(tx as Transaction), id }))

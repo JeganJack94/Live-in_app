@@ -1,6 +1,9 @@
-import { Redirect, Route } from 'react-router-dom';
+import React, { useState, useContext } from 'react';
+import { Redirect, Route, useLocation } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
+
+// Pages
 import Onboarding from './pages/Onboarding';
 import Dashboard from './pages/Dashboard';
 import Reports from './pages/Reports';
@@ -8,6 +11,16 @@ import Settings from './pages/Settings';
 import PinEntry from './pages/PinEntry';
 import Analytics from './pages/Analytics';
 import Chat from './pages/Chat';
+
+// Components
+import BottomTab from './components/BottomTab';
+import NotificationsModal from './components/NotificationsModal';
+
+// Icons
+import { FaMoon, FaBell, FaHeart } from 'react-icons/fa';
+
+// Context
+import { UserContext } from './context/UserContext';
 
 /* Core CSS required for Ionic components to work properly */
 import '@ionic/react/css/core.css';
@@ -24,29 +37,12 @@ import '@ionic/react/css/text-alignment.css';
 import '@ionic/react/css/text-transformation.css';
 import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
-
-/**
- * Ionic Dark Mode
- * -----------------------------------------------------
- * For more info, please see:
- * https://ionicframework.com/docs/theming/dark-mode
- */
-
-/* import '@ionic/react/css/palettes/dark.always.css'; */
-/* import '@ionic/react/css/palettes/dark.class.css'; */
 import '@ionic/react/css/palettes/dark.system.css';
 
 /* Theme variables */
 import './theme/variables.css';
-import BottomTab from './components/BottomTab';
-import { FaMoon, FaBell, FaHeart } from 'react-icons/fa';
-import NotificationsModal from './components/NotificationsModal';
 
 setupIonicReact();
-
-
-
-import React, { useState, useContext, createContext } from 'react';
 
 // Simple JSON database for two users
 const usersDB = {
@@ -63,9 +59,6 @@ const usersDB = {
     pin: '5678',
   },
 };
-
-// User context
-export const UserContext = createContext<{ user: typeof usersDB['userA-uid']; setUser: (u: typeof usersDB['userA-uid']) => void }>({ user: usersDB['userA-uid'], setUser: () => {} });
 
 const TopHeader: React.FC = () => {
   const [showNotif, setShowNotif] = useState(false);
@@ -101,7 +94,7 @@ const TopHeader: React.FC = () => {
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-pulse"></span>
           )}
         </button>
-        <img src={user.img} alt={user.name} className="w-7 h-7 rounded-full border-2 border-white shadow-lg transition-transform duration-300 hover:scale-110" />
+        {user && <img src={user.img} alt={user.name} className="w-7 h-7 rounded-full border-2 border-white shadow-lg transition-transform duration-300 hover:scale-110" />}
       </div>
       <NotificationsModal
         isOpen={showNotif}
@@ -134,40 +127,23 @@ const TopHeader: React.FC = () => {
 
 
 
-const App: React.FC = () => {
-  const [user, setUser] = useState(usersDB['userA-uid']);
-  return (
-    <UserContext.Provider value={{ user, setUser }}>
-      <IonApp>
-        <IonReactRouter>
-          <MainLayout />
-        </IonReactRouter>
-      </IonApp>
-    </UserContext.Provider>
-  );
-};
+const AppContent: React.FC = () => {
+  const location = useLocation();
+  const hideNav = location.pathname === '/onboarding' || location.pathname === '/pin';
 
-import { useLocation } from 'react-router-dom';
-
-const MainLayout: React.FC = () => {
-  const { pathname } = useLocation();
-  const hideNav = pathname === '/onboarding' || pathname === '/pin-entry';
   return (
     <>
       {!hideNav && <TopHeader />}
       <div className={hideNav ? '' : 'pb-24 pt-6'}>
         <IonRouterOutlet>
+          <Route exact path="/pin">
+            <PinEntry />
+          </Route>
           <Route exact path="/onboarding">
             <Onboarding />
           </Route>
           <Route exact path="/dashboard">
             <Dashboard />
-          </Route>
-          <Route exact path="/analytics">
-            <Analytics />
-          </Route>
-          <Route exact path="/chat">
-            <Chat />
           </Route>
           <Route exact path="/reports">
             <Reports />
@@ -175,16 +151,39 @@ const MainLayout: React.FC = () => {
           <Route exact path="/settings">
             <Settings />
           </Route>
-          <Route exact path="/pin-entry">
-            <PinEntry />
+          <Route exact path="/analytics">
+            <Analytics />
+          </Route>
+          <Route exact path="/chat">
+            <Chat />
           </Route>
           <Route exact path="/">
-            <Redirect to="/onboarding" />
+            <Redirect to="/pin" />
           </Route>
         </IonRouterOutlet>
       </div>
       {!hideNav && <BottomTab />}
     </>
+  );
+};
+
+const App: React.FC = () => {
+  const [user, setUser] = useState(usersDB['userA-uid']);
+  const [coupleId, setCoupleId] = useState<string | null>('couple-1');
+
+  return (
+    <UserContext.Provider value={{ 
+      user: { ...user, coupleId: coupleId || undefined }, 
+      setUser: (newUser) => setUser(newUser || usersDB['userA-uid']),
+      coupleId,
+      setCoupleId
+    }}>
+      <IonApp>
+        <IonReactRouter>
+          <AppContent />
+        </IonReactRouter>
+      </IonApp>
+    </UserContext.Provider>
   );
 };
 

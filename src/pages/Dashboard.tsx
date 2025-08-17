@@ -9,7 +9,7 @@ import ProgressCircle from '../components/ProgressCircle';
 import { categoryIcons } from '../utils/transactionUtils';
 import AddTransactionModal from '../components/AddTransactionModal';
 
-import { UserContext } from '../App';
+import { UserContext } from '../context/UserContext';
 
 interface ToastMessage {
   text: string;
@@ -61,7 +61,7 @@ const Dashboard: React.FC = () => {
 
   const handleDeleteTransaction = async (transactionId: string, addedByUid: string) => {
     // Only allow deletion if the user created the transaction
-    if (addedByUid !== user.uid) {
+    if (!user || addedByUid !== user.uid) {
       setToast({ text: 'You can only delete your own transactions', type: 'error' });
       return;
     }
@@ -81,10 +81,10 @@ const Dashboard: React.FC = () => {
       await addTransaction(coupleId, {
         id: newId,
         ...data,
-        addedBy: {
+        addedBy: user ? {
           name: user.name,
           uid: user.uid,
-        },
+      } : { name: '', uid: '' },
         timestamp: Date.now(),
       });
       setToast({ text: 'Transaction added successfully', type: 'success' });
@@ -99,15 +99,18 @@ const Dashboard: React.FC = () => {
     listenTransactions(coupleId, (txList: SharedTransaction[]) => {
       setTransactions(txList.reverse());
     });
-    // Fetch settings for progress circles
-    const settingsRef = ref(db, `users/${user.uid}/settings`);
-    import('firebase/database').then(({ get }) => {
-      get(settingsRef).then(snapshot => {
-        const data = snapshot.val();
-        if (data) setSettings(data);
+    
+    // Fetch settings for progress circles if user exists
+    if (user?.uid) {
+      const settingsRef = ref(db, `users/${user.uid}/settings`);
+      import('firebase/database').then(({ get }) => {
+        get(settingsRef).then(snapshot => {
+          const data = snapshot.val();
+          if (data) setSettings(data);
+        });
       });
-    });
-  }, [user.uid]);
+    }
+  }, [user?.uid, coupleId]);
   // Calculate totals for progress circles
   const totalIncome = Number(settings.incomeA || 0) + Number(settings.incomeB || 0);
   const needsSpent = transactions.filter(tx => tx.category === 'Needs').reduce((sum, tx) => sum + Number(tx.amount), 0);

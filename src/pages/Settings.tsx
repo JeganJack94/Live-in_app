@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Redirect } from 'react-router-dom';
 import { db } from '../firebase/Firebase';
-import { UserContext } from '../App';
+import { UserContext } from '../context/UserContext';
 import { ref, set, get } from 'firebase/database';
 import { IonPage, IonContent } from '@ionic/react';
 import BottomTab from '../components/BottomTab';
@@ -59,10 +59,7 @@ const Settings: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent className="ion-padding bg-gray-50 pb-32 pt-8 mt-16">
-        <div className="flex items-center justify-between mb-2">
-          <div className="font-bold text-lg text-gray-900">Live-in</div>
-        </div>
+      <IonContent className="ion-padding top-10 bg-gray-50 pb-32 pt-8 mt-16">
         <h2 className="text-xl font-bold text-gray-900 mb-4 mt-2">Settings</h2>
         <div className="bg-white rounded-xl shadow p-4 mb-4">
           <div className="font-bold text-gray-900 mb-2">Income Setup</div>

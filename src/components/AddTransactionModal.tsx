@@ -67,8 +67,8 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: { isOpen: boolean; onC
 
   return (
     <IonModal isOpen={isOpen} onDidDismiss={onClose} className="!bg-transparent">
-      <div className="bg-gradient-to-r from-pink-400 via-purple-400 to-yellow-300 rounded-t-2xl shadow-lg p-1 w-[400px] mx-auto mt-8">
-        <div className="bg-white rounded-t-2xl p-6 w-[400px]">
+      <div className="bg-gradient-to-r from-pink-400 via-purple-400 to-yellow-300 rounded-2xl shadow-lg p-1 w-[400px] mx-auto mt-8">
+        <div className="bg-white rounded-2xl p-6 w-full max-h-[80vh] overflow-y-auto">
           <div className="flex items-center mb-4">
             <button onClick={onClose} className="text-gray-400 text-xl mr-2">←</button>
             <h2 className="font-bold text-lg text-gray-900 flex-1 text-center">Add Transaction</h2>
@@ -121,9 +121,9 @@ const AddTransactionModal = ({ isOpen, onClose, onSave }: { isOpen: boolean; onC
             <div className="text-sm font-semibold text-gray-700 mb-1">Description</div>
             <textarea placeholder="Enter transaction details..." value={desc} onChange={e => setDesc(e.target.value)} className="bg-gray-100 rounded-lg px-3 py-2 w-full" rows={2} />
           </div>
-          <div className="space-y-2">
-            <button onClick={handleSave} className="w-full bg-pink-500 text-white font-bold py-3 rounded-lg">Save Transaction</button>
-            <button onClick={onClose} className="w-full bg-gray-100 text-gray-700 font-bold py-3 rounded-lg">Cancel</button>
+          <div className="sticky bottom-0 bg-white pt-4 space-y-2">
+            <button onClick={handleSave} className="w-full bg-pink-500 text-white font-bold py-3 rounded-lg hover:bg-pink-600 transition-colors">Save Transaction</button>
+            <button onClick={onClose} className="w-full bg-gray-100 text-gray-700 font-bold py-3 rounded-lg hover:bg-gray-200 transition-colors">Cancel</button>
           </div>
         </div>
       </div>
