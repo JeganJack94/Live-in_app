@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { db } from '../firebase/Firebase';
+import { realtimeDb } from '../firebase/Firebase';
 import { ref, push, onValue } from 'firebase/database';
 import { FaHome, FaShoppingCart, FaUtensils, FaBus, FaGift, FaUserFriends, FaBeer, FaHamburger, FaUmbrellaBeach, FaTshirt, FaMoneyBillWave, FaPiggyBank, FaCoins, FaHandHoldingUsd, FaRegStar, FaQuestionCircle } from 'react-icons/fa';
 
@@ -39,7 +39,7 @@ export type Transaction = {
 
 // Add a transaction to RTDB under /couples/{coupleId}/transactions
 export const addTransaction = (coupleId: string, transaction: Transaction) => {
-  const transactionsRef = ref(db, `couples/${coupleId}/transactions`);
+  const transactionsRef = ref(realtimeDb, `couples/${coupleId}/transactions`);
   return push(transactionsRef, {
     ...transaction,
     timestamp: transaction.timestamp || Date.now(),
@@ -48,7 +48,7 @@ export const addTransaction = (coupleId: string, transaction: Transaction) => {
 
 // Listen for transactions in RTDB under /couples/{coupleId}/transactions
 export const listenTransactions = (coupleId: string, callback: (transactions: Transaction[]) => void) => {
-  const transactionsRef = ref(db, `couples/${coupleId}/transactions`);
+  const transactionsRef = ref(realtimeDb, `couples/${coupleId}/transactions`);
   return onValue(transactionsRef, (snapshot) => {
     const data = snapshot.val();
     const transactions: Transaction[] = data
@@ -56,4 +56,14 @@ export const listenTransactions = (coupleId: string, callback: (transactions: Tr
       : [];
     callback(transactions);
   });
+};
+
+// Format currency in Indian Rupees format
+export const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0
+  }).format(amount);
 };

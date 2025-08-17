@@ -1,13 +1,13 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { Redirect } from 'react-router-dom';
-import { db } from '../firebase/Firebase';
+import { realtimeDb } from '../firebase/Firebase';
 import { UserContext } from '../context/UserContext';
 import { ref, set, get } from 'firebase/database';
-import { IonPage, IonContent } from '@ionic/react';
+import { IonPage, IonContent, IonToast } from '@ionic/react';
 import BottomTab from '../components/BottomTab';
 
 const Settings: React.FC = () => {
-  const { user } = useContext(UserContext);
+  const { user, setUser } = useContext(UserContext);
   const [incomeA, setIncomeA] = useState('');
   const [incomeB, setIncomeB] = useState('');
   const [showIncomeA, setShowIncomeA] = useState(false);
@@ -18,11 +18,20 @@ const Settings: React.FC = () => {
   const [theme, setTheme] = useState('light');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [redirect, setRedirect] = useState(false);
+  const [toast, setToast] = useState<{
+    isOpen: boolean;
+    message: string;
+    color: 'success' | 'warning' | 'danger';
+  }>({
+    isOpen: false,
+    message: '',
+    color: 'success'
+  });
 
   // Fetch settings from Firebase on mount
   useEffect(() => {
     if (!user?.uid) return;
-    const settingsRef = ref(db, `users/${user.uid}/settings`);
+    const settingsRef = ref(realtimeDb, `users/${user.uid}/settings`);
     get(settingsRef).then(snapshot => {
       const data = snapshot.val();
       if (data) {
@@ -37,29 +46,67 @@ const Settings: React.FC = () => {
     });
   }, [user]);
 
-  // Save settings to Firebase
-  const saveSettings = () => {
-    if (!user?.uid) return;
-    set(ref(db, `users/${user.uid}/settings`), {
-      incomeA,
-      incomeB,
-      needs,
-      wants,
-      savings,
-      theme,
-      notificationsEnabled,
+  const showToast = (message: string, color: 'success' | 'warning' | 'danger' = 'success') => {
+    setToast({
+      isOpen: true,
+      message,
+      color
     });
-    alert('Settings saved!');
+  };
+
+  // Save settings to Firebase
+  const saveSettings = async () => {
+    if (!user?.uid) return;
+    try {
+      await set(ref(realtimeDb, `users/${user.uid}/settings`), {
+        incomeA,
+        incomeB,
+        needs,
+        wants,
+        savings,
+        theme,
+        notificationsEnabled,
+      });
+      showToast('Settings saved successfully!');
+    } catch (error) {
+      showToast('Failed to save settings', 'danger');
+    }
   };
 
   const handleLogout = () => {
-    // Implement logout logic (clear session, redirect, etc.)
-    setRedirect(true);
+    try {
+      // Clear user data from context and storage
+      setUser(null);
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('coupleId');
+      showToast('Logged out successfully', 'warning');
+      setTimeout(() => setRedirect(true), 1000);
+    } catch (error) {
+      showToast('Failed to logout', 'danger');
+    }
+  };
+
+  const handleThemeChange = (newTheme: string) => {
+    setTheme(newTheme);
+    showToast(`Theme changed to ${newTheme} mode`);
+  };
+
+  const handleNotificationChange = (enabled: boolean) => {
+    setNotificationsEnabled(enabled);
+    showToast(`Notifications ${enabled ? 'enabled' : 'disabled'}`);
   };
 
   return (
     <IonPage>
       <IonContent className="ion-padding top-10 bg-gray-50 pb-32 pt-8 mt-16">
+        <IonToast
+          isOpen={toast.isOpen}
+          onDidDismiss={() => setToast(prev => ({ ...prev, isOpen: false }))}
+          message={toast.message}
+          duration={2000}
+          position="top"
+          color={toast.color}
+        />
         <h2 className="text-xl font-bold text-gray-900 mb-4 mt-2">Settings</h2>
         <div className="bg-white rounded-xl shadow p-4 mb-4">
           <div className="font-bold text-gray-900 mb-2">Income Setup</div>
@@ -144,7 +191,11 @@ const Settings: React.FC = () => {
           <div className="font-bold text-gray-900 mb-2">Theme & Notifications</div>
           <div className="flex items-center justify-between mb-3">
             <span className="font-semibold text-gray-700">Theme</span>
-            <select value={theme} onChange={e => setTheme(e.target.value)} className="bg-gray-100 rounded-lg px-3 py-2">
+            <select 
+              value={theme} 
+              onChange={e => handleThemeChange(e.target.value)} 
+              className="bg-gray-100 rounded-lg px-3 py-2"
+            >
               <option value="light">Light</option>
               <option value="dark">Dark</option>
             </select>
@@ -152,7 +203,12 @@ const Settings: React.FC = () => {
           <div className="flex items-center justify-between">
             <span className="font-semibold text-gray-700">Notifications</span>
             <label className="flex items-center cursor-pointer">
-              <input type="checkbox" checked={notificationsEnabled} onChange={e => setNotificationsEnabled(e.target.checked)} className="accent-pink-500" />
+              <input 
+                type="checkbox" 
+                checked={notificationsEnabled} 
+                onChange={e => handleNotificationChange(e.target.checked)} 
+                className="accent-pink-500" 
+              />
               <span className="ml-2 text-gray-700">{notificationsEnabled ? 'On' : 'Off'}</span>
             </label>
           </div>

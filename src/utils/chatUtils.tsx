@@ -1,5 +1,5 @@
-import { ref, push, onValue, serverTimestamp } from 'firebase/database';
-import { db } from '../firebase/Firebase';
+import { ref, push, onValue, serverTimestamp, remove, get } from 'firebase/database';
+import { realtimeDb } from '../firebase/Firebase';
 
 export interface ChatMessage {
   id: string;
@@ -10,7 +10,7 @@ export interface ChatMessage {
 }
 
 export const sendMessage = async (chatRoomId: string, message: string, user: { uid: string; name: string }) => {
-  const chatRef = ref(db, `chats/${chatRoomId}/messages`);
+  const chatRef = ref(realtimeDb, `chats/${chatRoomId}/messages`);
   await push(chatRef, {
     message,
     timestamp: serverTimestamp(),
@@ -20,7 +20,7 @@ export const sendMessage = async (chatRoomId: string, message: string, user: { u
 };
 
 export const listenToMessages = (chatRoomId: string, callback: (messages: ChatMessage[]) => void) => {
-  const chatRef = ref(db, `chats/${chatRoomId}/messages`);
+  const chatRef = ref(realtimeDb, `chats/${chatRoomId}/messages`);
   return onValue(chatRef, (snapshot) => {
     const messages: ChatMessage[] = [];
     snapshot.forEach((childSnapshot) => {
@@ -32,4 +32,31 @@ export const listenToMessages = (chatRoomId: string, callback: (messages: ChatMe
     });
     callback(messages.sort((a, b) => a.timestamp - b.timestamp));
   });
+};
+
+export const clearChat = async (chatRoomId: string) => {
+  if (!chatRoomId) {
+    throw new Error('Chat room ID is required');
+  }
+
+  try {
+    // First verify the ref exists
+    const chatRef = ref(realtimeDb, `chats/${chatRoomId}/messages`);
+    
+    // Remove the messages
+    await remove(chatRef);
+    
+    // Verify deletion
+    const verifyRef = ref(realtimeDb, `chats/${chatRoomId}/messages`);
+    const snapshot = await get(verifyRef);
+    
+    if (snapshot.exists()) {
+      throw new Error('Failed to clear messages');
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error clearing chat:', error);
+    throw error;
+  }
 };

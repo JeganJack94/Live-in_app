@@ -1,7 +1,10 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { Redirect, Route, useLocation } from 'react-router-dom';
 import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
+
+// Components
+import AppHeader from './components/AppHeader';
 
 // Pages
 import Onboarding from './pages/Onboarding';
@@ -14,11 +17,8 @@ import Chat from './pages/Chat';
 
 // Components
 import BottomTab from './components/BottomTab';
-import NotificationsModal from './components/NotificationsModal';
 
 // Icons
-import { FaMoon, FaBell, FaHeart } from 'react-icons/fa';
-
 // Context
 import { UserContext } from './context/UserContext';
 
@@ -44,121 +44,89 @@ import './theme/variables.css';
 
 setupIonicReact();
 
-// Simple JSON database for two users
 const usersDB = {
   'userA-uid': {
     name: 'Revathy',
     img: '/Revathy.jpeg',
     uid: 'userA-uid',
-    pin: '1234',
+    pin: '9900'
   },
   'userB-uid': {
     name: 'Jegan',
     img: '/Jegan.jpg',
     uid: 'userB-uid',
-    pin: '5678',
-  },
+    pin: '0099'
+  }
 };
 
-const TopHeader: React.FC = () => {
-  const [showNotif, setShowNotif] = useState(false);
-  const [notifications, setNotifications] = useState([
-    { id: 1, text: 'Electricity bill paid', read: false },
-    { id: 2, text: 'Groceries split request', read: false },
-    { id: 3, text: 'Monthly report ready', read: true },
-  ]);
-  const { user } = useContext(UserContext);
+interface AppRoutesProps {
+  user: User | null;
+  darkMode: boolean;
+  showNotif: boolean;
+  notifications: Array<{ id: number; text: string; read: boolean; }>;
+  onToggleDarkMode: () => void;
+  onNotifClick: () => void;
+  onNotifClose: () => void;
+  onMarkRead: (id: number) => void;
+  onClearAll: () => void;
+}
 
-  const handleMarkRead = (id: number) => {
-    setNotifications(notifications.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-  const handleClearAll = () => {
-    setNotifications([]);
-  };
-
-  return (
-    <div className="w-full px-4 py-3 flex items-center justify-between border-b border-gray-200 z-20 bg-gradient-to-r from-pink-400 via-purple-400 to-yellow-300 animate-gradient">
-      <div className="flex items-center">
-        <span className="mr-2">
-          <span className="w-8 h-8 flex items-center justify-center bg-white rounded-full animate-bounce">
-            <FaHeart className="text-pink-500 text-2xl" />
-          </span>
-        </span>
-        <span className="font-extrabold text-xl text-white drop-shadow-lg tracking-wide animate-fade-in">Live-in</span>
-      </div>
-      <div className="flex items-center space-x-3">
-        <button className="text-xl text-white opacity-80 hover:opacity-100 transition duration-300"><FaMoon /></button>
-        <button className="relative text-xl text-white opacity-80 hover:opacity-100 transition duration-300" onClick={() => setShowNotif(true)}>
-          <FaBell />
-          {notifications.some(n => !n.read) && (
-            <span className="absolute -top-1 -right-1 w-2 h-2 bg-pink-500 rounded-full animate-pulse"></span>
-          )}
-        </button>
-        {user && <img src={user.img} alt={user.name} className="w-7 h-7 rounded-full border-2 border-white shadow-lg transition-transform duration-300 hover:scale-110" />}
-      </div>
-      <NotificationsModal
-        isOpen={showNotif}
-        onClose={() => setShowNotif(false)}
-        notifications={notifications}
-        onMarkRead={handleMarkRead}
-        onClearAll={handleClearAll}
-      />
-      <style>{`
-        .animate-gradient {
-          background-size: 200% 200%;
-          animation: gradientMove 4s ease infinite;
-        }
-        @keyframes gradientMove {
-          0% {background-position: 0% 50%;}
-          50% {background-position: 100% 50%;}
-          100% {background-position: 0% 50%;}
-        }
-        .animate-fade-in {
-          animation: fadeIn 1s ease;
-        }
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-    </div>
-  );
-};
-
-
-
-const AppContent: React.FC = () => {
+const AppRoutes: React.FC<AppRoutesProps> = ({ 
+  user, 
+  showNotif, 
+  notifications,
+  onToggleDarkMode,
+  onNotifClick,
+  onNotifClose,
+  onMarkRead,
+  onClearAll
+}) => {
   const location = useLocation();
-  const hideNav = location.pathname === '/onboarding' || location.pathname === '/pin';
+  const hideNav = ['/onboarding', '/pin-entry', '/chat'].includes(location.pathname);
+
+  if (!user && location.pathname !== '/pin-entry' && location.pathname !== '/onboarding') {
+    return <Redirect to="/onboarding" />;
+  }
 
   return (
     <>
-      {!hideNav && <TopHeader />}
-      <div className={hideNav ? '' : 'pb-24 pt-6'}>
+      {!hideNav && (
+        <AppHeader
+          user={user}
+          showNotif={showNotif}
+          notifications={notifications}
+          onToggleDarkMode={onToggleDarkMode}
+          onNotifClick={onNotifClick}
+          onNotifClose={onNotifClose}
+          onMarkRead={onMarkRead}
+          onClearAll={onClearAll}
+        />
+      )}
+      <div className={location.pathname === '/chat' ? '' : hideNav ? '' : 'pb-24 pt-6'}>
         <IonRouterOutlet>
-          <Route exact path="/pin">
-            <PinEntry />
-          </Route>
           <Route exact path="/onboarding">
             <Onboarding />
           </Route>
+          <Route exact path="/pin-entry">
+            <PinEntry />
+          </Route>
           <Route exact path="/dashboard">
-            <Dashboard />
+            {user ? <Dashboard /> : <Redirect to="/onboarding" />}
           </Route>
           <Route exact path="/reports">
-            <Reports />
+            {user ? <Reports /> : <Redirect to="/onboarding" />}
           </Route>
           <Route exact path="/settings">
-            <Settings />
+            {user ? <Settings /> : <Redirect to="/onboarding" />}
           </Route>
           <Route exact path="/analytics">
-            <Analytics />
+            {user ? <Analytics /> : <Redirect to="/onboarding" />}
           </Route>
           <Route exact path="/chat">
-            <Chat />
+            {user ? <Chat /> : <Redirect to="/onboarding" />}
           </Route>
           <Route exact path="/">
-            <Redirect to="/pin" />
+            <Redirect to="/onboarding" />
           </Route>
         </IonRouterOutlet>
       </div>
@@ -167,23 +135,102 @@ const AppContent: React.FC = () => {
   );
 };
 
+interface User {
+  name: string;
+  img: string;
+  uid: string;
+  pin: string;
+}
+
 const App: React.FC = () => {
-  const [user, setUser] = useState(usersDB['userA-uid']);
-  const [coupleId, setCoupleId] = useState<string | null>('couple-1');
+  const [user, setUser] = useState<User | null>(() => {
+    const savedUser = localStorage.getItem('currentUser');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
+  
+  const [coupleId, setCoupleId] = useState<string | null>(() => {
+    const savedCoupleId = localStorage.getItem('coupleId');
+    return savedCoupleId ? JSON.parse(savedCoupleId) : null;
+  });
+
+  const [darkMode, setDarkMode] = useState(false);
+  const [showNotif, setShowNotif] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: 1, text: 'Electricity bill paid', read: false },
+    { id: 2, text: 'Groceries split request', read: false },
+    { id: 3, text: 'Monthly report ready', read: true },
+  ]);
+
+  // Persist user data whenever it changes
+  React.useEffect(() => {
+    if (user) {
+      localStorage.setItem('currentUser', JSON.stringify(user));
+    } else {
+      localStorage.removeItem('currentUser');
+    }
+  }, [user]);
+
+  // Persist coupleId whenever it changes
+  React.useEffect(() => {
+    if (coupleId) {
+      localStorage.setItem('coupleId', JSON.stringify(coupleId));
+    } else {
+      localStorage.removeItem('coupleId');
+    }
+  }, [coupleId]);
+
+  const handleSetUser = (newUser: User | null) => {
+    if (newUser) {
+      setUser(newUser);
+      const coupleUsers = ['userA-uid', 'userB-uid'].sort();
+      const newCoupleId = coupleUsers.join('-');
+      setCoupleId(newCoupleId);
+    } else {
+      setUser(null);
+      setCoupleId(null);
+      localStorage.removeItem('currentUser');
+      localStorage.removeItem('coupleId');
+    }
+  };
+
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+    document.body.classList.toggle('dark');
+  };
+
+  const handleMarkRead = (id: number) => {
+    setNotifications(notifications.map(n => 
+      n.id === id ? { ...n, read: true } : n
+    ));
+  };
+
+  const handleClearAll = () => {
+    setNotifications([]);
+  };
 
   return (
-    <UserContext.Provider value={{ 
-      user: { ...user, coupleId: coupleId || undefined }, 
-      setUser: (newUser) => setUser(newUser || usersDB['userA-uid']),
-      coupleId,
-      setCoupleId
-    }}>
-      <IonApp>
-        <IonReactRouter>
-          <AppContent />
-        </IonReactRouter>
-      </IonApp>
-    </UserContext.Provider>
+    <IonApp>
+      <IonReactRouter>
+        <UserContext.Provider value={{ 
+          user: user ? { ...user, coupleId: coupleId || undefined } : null, 
+          setUser: handleSetUser,
+          coupleId,
+          setCoupleId
+        }}>
+          <AppRoutes 
+            user={user}
+            darkMode={darkMode}
+            showNotif={showNotif}
+            notifications={notifications}
+            onToggleDarkMode={toggleDarkMode}
+            onNotifClick={() => setShowNotif(true)}
+            onNotifClose={() => setShowNotif(false)}
+            onMarkRead={handleMarkRead}
+            onClearAll={handleClearAll}
+          />
+        </UserContext.Provider>
+      </IonReactRouter>
+    </IonApp>
   );
 };
 

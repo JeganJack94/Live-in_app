@@ -1,7 +1,7 @@
 import React, { useState, useContext, useEffect } from 'react';
 import { FaTrash } from 'react-icons/fa';
-import { db } from '../firebase/Firebase';
-import { ref, remove } from 'firebase/database';
+import { realtimeDb } from '../firebase/Firebase';
+import { ref, remove, get } from 'firebase/database';
 import { addTransaction, listenTransactions, Transaction as SharedTransaction } from '../utils/transactionUtils';
 import { IonPage, IonContent } from '@ionic/react';
 import BottomTab from '../components/BottomTab';
@@ -34,13 +34,13 @@ const Toast: React.FC<{ message: ToastMessage; onClose: () => void }> = ({ messa
 };
 
 const Dashboard: React.FC = () => {
-  const { user } = useContext(UserContext);
+  const { user, coupleId } = useContext(UserContext);
   const [showModal, setShowModal] = useState(false);
   const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [transactions, setTransactions] = useState<SharedTransaction[]>([]);
+  const [settings, setSettings] = useState({ needs: 50, wants: 30, savings: 20, incomeA: '', incomeB: '' });
+  const [partnerSettings, setPartnerSettings] = useState({ incomeA: '', incomeB: '' });
 
-  // ...existing code...
-
-  // ...existing code...
   interface Transaction {
     id: string;
     amount: string;
@@ -55,18 +55,21 @@ const Dashboard: React.FC = () => {
     };
   }
 
-  const [transactions, setTransactions] = useState<SharedTransaction[]>([]);
-  const coupleId = 'jegan-revathy'; // Replace with dynamic value as needed
-  const [settings, setSettings] = useState({ needs: 50, wants: 30, savings: 20, incomeA: '', incomeB: '' });
-
   const handleDeleteTransaction = async (transactionId: string, addedByUid: string) => {
+    // Verify user and coupleId are available
+    if (!user || !coupleId) {
+      setToast({ text: 'User session error. Please try logging in again.', type: 'error' });
+      return;
+    }
+
     // Only allow deletion if the user created the transaction
-    if (!user || addedByUid !== user.uid) {
+    if (addedByUid !== user.uid) {
       setToast({ text: 'You can only delete your own transactions', type: 'error' });
       return;
     }
+
     try {
-      const transactionRef = ref(db, `couples/${coupleId}/transactions/${transactionId}`);
+      const transactionRef = ref(realtimeDb, `couples/${coupleId}/transactions/${transactionId}`);
       await remove(transactionRef);
       setToast({ text: 'Transaction deleted successfully', type: 'success' });
     } catch (error) {
@@ -76,15 +79,23 @@ const Dashboard: React.FC = () => {
   };
 
   const handleSaveTransaction = async (data: { amount: string; category: string; item: string; partner: string; desc: string }) => {
+    if (!user) {
+      setToast({ text: 'User session error. Please try logging in again.', type: 'error' });
+      return;
+    }
+
+    // Get the stable coupleId (always same regardless of who logs in)
+    const stableCoupleId = ['userA-uid', 'userB-uid'].sort().join('-');
+
     const newId = Date.now().toString();
     try {
-      await addTransaction(coupleId, {
+      await addTransaction(stableCoupleId, {
         id: newId,
         ...data,
-        addedBy: user ? {
+        addedBy: {
           name: user.name,
           uid: user.uid,
-      } : { name: '', uid: '' },
+        },
         timestamp: Date.now(),
       });
       setToast({ text: 'Transaction added successfully', type: 'success' });
@@ -95,30 +106,77 @@ const Dashboard: React.FC = () => {
   };
 
   useEffect(() => {
-    // Listen for shared transactions
+    // Only proceed if we have both user and coupleId
+    if (!user?.uid || !coupleId) return;
+
+    // Listen for shared transactions under the couple ID
     listenTransactions(coupleId, (txList: SharedTransaction[]) => {
       setTransactions(txList.reverse());
     });
     
-    // Fetch settings for progress circles if user exists
-    if (user?.uid) {
-      const settingsRef = ref(db, `users/${user.uid}/settings`);
-      import('firebase/database').then(({ get }) => {
-        get(settingsRef).then(snapshot => {
-          const data = snapshot.val();
-          if (data) setSettings(data);
-        });
+    // Get partner's user ID
+    const partnerId = user.uid === 'userA-uid' ? 'userB-uid' : 'userA-uid';
+    
+    // Fetch current user's settings
+    const userSettingsRef = ref(realtimeDb, `users/${user.uid}/settings`);
+    const partnerSettingsRef = ref(realtimeDb, `users/${partnerId}/settings`);
+
+    // Fetch both users' settings
+    Promise.all([
+      get(userSettingsRef),
+      get(partnerSettingsRef)
+    ]).then(([userSnapshot, partnerSnapshot]) => {
+      const userData = userSnapshot.val() || {};
+      const partnerData = partnerSnapshot.val() || {};
+
+      // Set current user's settings with defaults
+      setSettings({
+        needs: userData.needs || 50,
+        wants: userData.wants || 30,
+        savings: userData.savings || 20,
+        incomeA: userData.incomeA || '',
+        incomeB: userData.incomeB || ''
       });
-    }
+
+      // Set partner's settings
+      setPartnerSettings({
+        incomeA: partnerData.incomeA || '',
+        incomeB: partnerData.incomeB || ''
+      });
+    }).catch(error => {
+      console.error('Error fetching settings:', error);
+    });
   }, [user?.uid, coupleId]);
-  // Calculate totals for progress circles
-  const totalIncome = Number(settings.incomeA || 0) + Number(settings.incomeB || 0);
-  const needsSpent = transactions.filter(tx => tx.category === 'Needs').reduce((sum, tx) => sum + Number(tx.amount), 0);
-  const wantsSpent = transactions.filter(tx => tx.category === 'Wants').reduce((sum, tx) => sum + Number(tx.amount), 0);
-  const savingsSpent = transactions.filter(tx => tx.category === 'Savings').reduce((sum, tx) => sum + Number(tx.amount), 0);
-  const needsPercent = totalIncome ? Math.round((needsSpent / (totalIncome * (settings.needs / 100))) * 100) : 0;
-  const wantsPercent = totalIncome ? Math.round((wantsSpent / (totalIncome * (settings.wants / 100))) * 100) : 0;
-  const savingsPercent = totalIncome ? Math.round((savingsSpent / (totalIncome * (settings.savings / 100))) * 100) : 0;
+  // Calculate combined income from both users
+  const userIncomeA = Number(settings.incomeA) || 0;
+  const userIncomeB = Number(settings.incomeB) || 0;
+  const partnerIncomeA = Number(partnerSettings.incomeA) || 0;
+  const partnerIncomeB = Number(partnerSettings.incomeB) || 0;
+  
+  // Total income is the sum of both users' incomes
+  const totalIncome = userIncomeA + userIncomeB + partnerIncomeA + partnerIncomeB;
+  
+  // Calculate spending by category
+  const needsSpent = transactions
+    .filter(tx => tx.category === 'Needs')
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  
+  const wantsSpent = transactions
+    .filter(tx => tx.category === 'Wants')
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  
+  const savingsSpent = transactions
+    .filter(tx => tx.category === 'Savings')
+    .reduce((sum, tx) => sum + Number(tx.amount || 0), 0);
+  
+  // Calculate budgets and percentages
+  const needsBudget = totalIncome * (settings.needs / 100);
+  const wantsBudget = totalIncome * (settings.wants / 100);
+  const savingsBudget = totalIncome * (settings.savings / 100);
+
+  const needsPercent = needsBudget > 0 ? Math.round((needsSpent / needsBudget) * 100) : 0;
+  const wantsPercent = wantsBudget > 0 ? Math.round((wantsSpent / wantsBudget) * 100) : 0;
+  const savingsPercent = savingsBudget > 0 ? Math.round((savingsSpent / savingsBudget) * 100) : 0;
 
   return (
     <IonPage>
@@ -141,25 +199,52 @@ const Dashboard: React.FC = () => {
             <div className="flex-1">
               <div className="font-semibold text-gray-500">Needs</div>
               <div className="text-2xl font-bold text-red-500">₹{needsSpent.toLocaleString('en-IN')}</div>
-              <div className="text-sm text-gray-400">{settings.needs}% of income</div>
+              <div className="text-sm text-gray-400">
+                {totalIncome > 0 
+                  ? `Budget: ₹${needsBudget.toLocaleString('en-IN')} (${settings.needs}%)`
+                  : 'Set income in Settings'
+                }
+              </div>
             </div>
-            <ProgressCircle percent={needsPercent} color="#ef4444" label={`${needsPercent}%`} size={56} />
+            <ProgressCircle 
+              percent={totalIncome > 0 ? needsPercent : 0} 
+              color="#ef4444" 
+              size={56} 
+            />
           </div>
           <div className="bg-purple-50 border border-purple-100 rounded-xl p-4 flex items-center">
             <div className="flex-1">
               <div className="font-semibold text-gray-500">Wants</div>
               <div className="text-2xl font-bold text-purple-500">₹{wantsSpent.toLocaleString('en-IN')}</div>
-              <div className="text-sm text-gray-400">{settings.wants}% of income</div>
+              <div className="text-sm text-gray-400">
+                {totalIncome > 0 
+                  ? `Budget: ₹${wantsBudget.toLocaleString('en-IN')} (${settings.wants}%)`
+                  : 'Set income in Settings'
+                }
+              </div>
             </div>
-            <ProgressCircle percent={wantsPercent} color="#a78bfa" label={`${wantsPercent}%`} size={56} />
+            <ProgressCircle 
+              percent={totalIncome > 0 ? wantsPercent : 0} 
+              color="#a78bfa" 
+              size={56} 
+            />
           </div>
           <div className="bg-yellow-50 border border-yellow-100 rounded-xl p-4 flex items-center">
             <div className="flex-1">
               <div className="font-semibold text-gray-500">Savings</div>
               <div className="text-2xl font-bold text-yellow-500">₹{savingsSpent.toLocaleString('en-IN')}</div>
-              <div className="text-sm text-gray-400">{settings.savings}% of income</div>
+              <div className="text-sm text-gray-400">
+                {totalIncome > 0 
+                  ? `Budget: ₹${savingsBudget.toLocaleString('en-IN')} (${settings.savings}%)`
+                  : 'Set income in Settings'
+                }
+              </div>
             </div>
-            <ProgressCircle percent={savingsPercent} color="#eab308" label={`${savingsPercent}%`} size={56} />
+            <ProgressCircle 
+              percent={totalIncome > 0 ? savingsPercent : 0} 
+              color="#eab308" 
+              size={56} 
+            />
           </div>
         </div>
         <div className="mb-24">

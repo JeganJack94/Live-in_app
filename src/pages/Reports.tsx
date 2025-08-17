@@ -18,7 +18,7 @@ const Reports: React.FC = () => {
   const [page, setPage] = useState(1);
   const itemsPerPage = 10;
 
-  const coupleId = 'jegan-revathy'; // Same as in Dashboard
+  const coupleId = 'userA-uid-userB-uid'; // Same as in Dashboard
 
   const generatePDF = () => {
     const doc = new jsPDF();

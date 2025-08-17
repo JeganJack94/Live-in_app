@@ -1,0 +1,17 @@
+.delete-confirm-modal {
+  --height: auto;
+  --width: 90%;
+  max-width: 400px;
+}
+
+.delete-confirm-modal::part(content) {
+  border-radius: 1rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+@media (min-width: 768px) {
+  .delete-confirm-modal {
+    --width: 400px;
+  }
+}

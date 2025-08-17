@@ -1,8 +1,7 @@
-// Firebase configuration and initialization for Realtime Database
 import { initializeApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
 
-const firebaseConfig = {
+export const firebaseConfig = {
   apiKey: "AIzaSyCu1SGOO8AuECKoE7Cp3EB1eMe9x0Gl_qA",
   authDomain: "live-in-dd521.firebaseapp.com",
   databaseURL: "https://live-in-dd521-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -12,5 +11,9 @@ const firebaseConfig = {
   appId: "1:532598159874:web:570eae5d894134ce33051b"
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getDatabase(app);
+// Initialize Firebase
+export const app = initializeApp(firebaseConfig);
+
+// Initialize Realtime Database
+export const realtimeDb = getDatabase(app);
+
